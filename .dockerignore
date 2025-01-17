@@ -1,0 +1,17 @@
+# Node modules ไม่ต้องคัดลอกเข้า Docker image
+node_modules
+
+# Log files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ไฟล์ environment local (หากคุณใช้งานใน production แล้วตั้งค่า environment variables ผ่าน Cloud Run)
+.env
+
+# ไฟล์หรือโฟลเดอร์สำหรับการพัฒนา เช่น บิลด์, cache, และอื่นๆ
+.git
+.gitignore
+.DS_Store
+coverage
+createFirstAdmin.js
