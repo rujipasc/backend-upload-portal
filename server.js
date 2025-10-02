@@ -43,17 +43,25 @@ app.use(helmet({
 }));
 
 
-const connectWithRetry =  async () => {
+let retryCount = 0;
+const connectWithRetry = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    console.log(`MongoDB connection established successfully!`);
+    console.log("✅ MongoDB connection established successfully!");
   } catch (err) {
-    console.error("MongoDB connection failed", err.message);
-    setTimeout(connectWithRetry, 5000);
+    retryCount++;
+    console.error(`❌ MongoDB connection failed (attempt ${retryCount}):`, err.message);
+    if (retryCount < 5) {
+      setTimeout(connectWithRetry, 5000);
+    } else {
+      console.error("❌ Exceeded max retries, shutting down.");
+      process.exit(1);
+    }
   }
-}
+};
 
 connectWithRetry();
+
 
 
 app.get('/api/v1/healthcheck', (req, res) => {
@@ -88,18 +96,24 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 8080;
 const server = app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 }).on('error', (err) => {
-    console.error('Failed to start server:', err);
+  console.error('❌ Failed to start server:', err);
 });
 
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server');
-  server.close(() => {
-      console.log('HTTP server closed');
-      mongoose.connection.close(false, () => {
-          console.log('MongoDB connection closed');
-          process.exit(0);
-      });
+async function shutdown(signal) {
+  console.log(`${signal} signal received: closing HTTP server`);
+  server.close(async () => {
+    console.log('✅ HTTP server closed');
+    try {
+      await mongoose.connection.close(false);
+      console.log('✅ MongoDB connection closed');
+    } catch (err) {
+      console.error('❌ Error closing MongoDB connection:', err);
+    }
+    process.exit(0);
   });
-});
+}
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
